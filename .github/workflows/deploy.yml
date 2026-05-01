@@ -12,14 +12,16 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          host: server234.web-hosting.com
+          username: websflku
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: 21098
           script: |
-            cd ${{ secrets.APP_PATH }}
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            cd /home/websflku/projectmanagement
             git pull origin main
-            npm install --production --silent
+            npm install --omit=dev --silent
             mkdir -p tmp
             touch tmp/restart.txt
             echo "✅ Deployment complete"
