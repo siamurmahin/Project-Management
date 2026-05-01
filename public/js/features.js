@@ -300,7 +300,8 @@ async function quickStatusChange(taskId, status) {
 // 6. CALENDAR VIEW
 // ─────────────────────────────────────────────────────────────────────
 async function renderCalendarView() {
-  const { tasks } = await api.getMyTasks();
+  const pid = state.currentProjectId;
+  const { tasks } = pid ? await api.getProjectTasks(pid) : await api.getMyTasks();
   const allProjects = state.projects;
 
   let current = new Date();
@@ -782,16 +783,22 @@ async function renderAttachmentsSection(taskId) {
       <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);margin-bottom:8px;">
         Attachments (${attachments.length})
       </div>
-      ${attachments.map(a => `
+      ${attachments.map(a => {
+        const isImg = a.mime_type?.startsWith('image/');
+        const thumb = isImg
+          ? `<img src="/uploads/${taskId}/${a.filename}" alt="${escHtml(a.original_name)}" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border);flex-shrink:0;">`
+          : `<span style="font-size:1.2rem;">${getIcon(a.mime_type)}</span>`;
+        return `
         <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:1.2rem;">${getIcon(a.mime_type)}</span>
+          ${thumb}
           <div style="flex:1;min-width:0;">
             <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(a.original_name)}</div>
             <div style="font-size:.7rem;color:var(--text-dim);">${fmtSize(a.size_bytes)} · ${escHtml(a.full_name)} · ${liveTime(a.created_at)}</div>
           </div>
-          <a href="/uploads/${taskId}/${a.filename}" download="${escHtml(a.original_name)}" class="btn-icon" data-tooltip="Download">${icon('download',14)}</a>
+          <a href="/uploads/${taskId}/${a.filename}" ${isImg?`target="_blank"`:`download="${escHtml(a.original_name)}"`} class="btn-icon" data-tooltip="${isImg?'View':'Download'}">${icon(isImg?'eye':'download',14)}</a>
           <button class="btn-icon" onclick="deleteAttachment(${a.id},${taskId})" style="color:var(--danger);" data-tooltip="Delete">${icon('trash-2',12)}</button>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
       <div style="margin-top:8px;">
         <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
           ${icon('paperclip',14)} Attach file
@@ -1089,6 +1096,7 @@ const _origNavigateTo2 = window.navigateTo;
 window.navigateTo = async function(view, projectId) {
   if (view === 'calendar') {
     state.view = 'calendar';
+    if (projectId) state.currentProjectId = projectId;
     document.querySelectorAll('.sidebar-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === 'calendar'));
     const titleEl = document.getElementById('header-title');
     if (titleEl) titleEl.textContent = 'Calendar';
@@ -1135,7 +1143,7 @@ window.renderBoard = async function(projectId) {
     <div style="display:flex;gap:2px;background:var(--bg-elevated);padding:3px;border-radius:var(--r-sm);">
       <button class="btn btn-primary btn-sm view-btn" title="Board" onclick="navigateTo('board',${projectId})">${icon('grid',14)}</button>
       <button class="btn btn-ghost btn-sm view-btn" title="List" onclick="navigateTo('list',${projectId})">${icon('list',14)}</button>
-      <button class="btn btn-ghost btn-sm view-btn" title="Calendar" onclick="navigateTo('calendar')">${icon('calendar',14)}</button>
+      <button class="btn btn-ghost btn-sm view-btn" title="Calendar" onclick="navigateTo('calendar',${projectId})">${icon('calendar',14)}</button>
       <button class="btn btn-ghost btn-sm view-btn" title="Gantt" onclick="navigateTo('gantt',${projectId})">${icon('bar-chart-2',14)}</button>
     </div>`;
 

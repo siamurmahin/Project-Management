@@ -672,7 +672,7 @@ async function openTaskDetail(taskId) {
       <div style="overflow-y:auto;padding:24px 28px;min-width:0;">
 
         <!-- Title -->
-        <h2 class="td-title">${taskTitle}</h2>
+        <h2 class="td-title${canEdit?' td-title-editable':''}"${canEdit?` contenteditable="true" spellcheck="false" onblur="saveTitleEdit(${task.id},this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" title="Click to edit title"`:''} >${taskTitle}</h2>
 
         <!-- Status row -->
         <div style="margin-bottom:20px;">
@@ -690,9 +690,11 @@ async function openTaskDetail(taskId) {
         <!-- Description -->
         <div style="margin-bottom:20px;">
           <div class="td-section-label">Description</div>
-          ${task.description
-            ? `<div class="td-description">${escHtml(task.description)}</div>`
-            : `<div class="td-description td-no-desc">No description provided.</div>`}
+          ${canEdit
+            ? `<textarea class="form-control td-desc-textarea" placeholder="Add a description…" rows="3" onblur="updateTaskField(${task.id},'description',this.value)">${escHtml(task.description||'')}</textarea>`
+            : (task.description
+                ? `<div class="td-description">${escHtml(task.description)}</div>`
+                : `<div class="td-description td-no-desc">No description provided.</div>`)}
         </div>
 
         <!-- features.js injects: subtasks, labels, watchers, deps, attachments HERE -->
@@ -720,8 +722,11 @@ async function openTaskDetail(taskId) {
                   <button class="toolbar-btn" onclick="applyFormat('codeblock')" title="Code block" style="font-size:.7rem;">{ }</button>
                   <span class="comment-toolbar-sep"></span>
                   <button class="toolbar-btn" onclick="applyFormat('list')" title="Bullet list">≡</button>
+                  <span class="comment-toolbar-sep"></span>
+                  <button class="toolbar-btn" id="comment-preview-btn" onmousedown="event.preventDefault();toggleCommentPreview()" title="Preview rendered markdown">👁</button>
                 </div>
                 <textarea class="comment-textarea" id="comment-input" placeholder="Write an update, leave feedback, or @ someone to notify them…" rows="2"></textarea>
+                <div id="comment-preview-panel" class="td-description" style="display:none;min-height:60px;margin-bottom:4px;"></div>
                 <div class="comment-submit-row">
                   <span class="comment-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to post &nbsp;·&nbsp; <kbd>@</kbd> to mention</span>
                   <button class="btn btn-primary btn-sm" onclick="submitComment(${task.id})">${icon('play', 13)} Post</button>
@@ -895,7 +900,7 @@ async function openTaskFull(taskId) {
       </div>
       <div class="task-detail-grid td-grid-layout">
         <div style="overflow-y:auto;padding:24px 28px;min-width:0;">
-          <h2 class="td-title">${escHtml(task.title)}</h2>
+          <h2 class="td-title${canEdit?' td-title-editable':''}"${canEdit?` contenteditable="true" spellcheck="false" onblur="saveTitleEdit(${task.id},this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" title="Click to edit title"`:''} >${escHtml(task.title)}</h2>
           <div style="margin-bottom:20px;">
             <div class="td-section-label">Status</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -909,9 +914,11 @@ async function openTaskFull(taskId) {
           </div>
           <div style="margin-bottom:20px;">
             <div class="td-section-label">Description</div>
-            ${task.description
-              ? `<div class="td-description">${escHtml(task.description)}</div>`
-              : `<div class="td-description td-no-desc">No description provided.</div>`}
+            ${canEdit
+              ? `<textarea class="form-control td-desc-textarea" placeholder="Add a description…" rows="3" onblur="updateTaskField(${task.id},'description',this.value)">${escHtml(task.description||'')}</textarea>`
+              : (task.description
+                  ? `<div class="td-description">${escHtml(task.description)}</div>`
+                  : `<div class="td-description td-no-desc">No description provided.</div>`)}
           </div>
           <div>
             <div class="td-section-label">Comments
@@ -935,8 +942,11 @@ async function openTaskFull(taskId) {
                     <button class="toolbar-btn" onclick="applyFormat('codeblock')" title="Code block" style="font-size:.7rem;">{ }</button>
                     <span class="comment-toolbar-sep"></span>
                     <button class="toolbar-btn" onclick="applyFormat('list')" title="Bullet list">≡</button>
+                    <span class="comment-toolbar-sep"></span>
+                    <button class="toolbar-btn" id="comment-preview-btn" onmousedown="event.preventDefault();toggleCommentPreview()" title="Preview rendered markdown">👁</button>
                   </div>
                   <textarea class="comment-textarea" id="comment-input" placeholder="Write a comment, leave feedback, or @ someone to notify them…" rows="2"></textarea>
+                  <div id="comment-preview-panel" class="td-description" style="display:none;min-height:60px;margin-bottom:4px;"></div>
                   <div class="comment-submit-row">
                     <span class="comment-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to post &nbsp;·&nbsp; <kbd>@</kbd> to mention</span>
                     <button class="btn btn-primary btn-sm" onclick="submitComment(${task.id})">${icon('play', 13)} Post</button>
@@ -1089,6 +1099,32 @@ async function updateTaskField(taskId, field, value) {
     await api.updateTask(taskId, { [field]: value });
     toast('Updated', 'success');
   } catch (err) { toast(err.message, 'error'); }
+}
+
+async function saveTitleEdit(taskId, el) {
+  const newTitle = el.textContent.trim();
+  if (!newTitle) return;
+  await updateTaskField(taskId, 'title', newTitle);
+}
+
+function toggleCommentPreview() {
+  const ta = document.getElementById('comment-input');
+  const panel = document.getElementById('comment-preview-panel');
+  const btn = document.getElementById('comment-preview-btn');
+  if (!ta || !panel || !btn) return;
+  const previewing = panel.style.display !== 'none';
+  if (previewing) {
+    panel.style.display = 'none';
+    ta.style.display = '';
+    btn.textContent = '👁';
+    btn.title = 'Preview rendered markdown';
+  } else {
+    panel.innerHTML = renderMarkdown(ta.value) || '<em style="color:var(--text-dim)">Nothing to preview</em>';
+    panel.style.display = '';
+    ta.style.display = 'none';
+    btn.textContent = '✍';
+    btn.title = 'Back to write mode';
+  }
 }
 
 // ── Multi-assignee support ────────────────────────────────────────────────
