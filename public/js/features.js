@@ -279,7 +279,7 @@ async function renderListView(projectId) {
           ${['low','medium','high','urgent'].map(p=>`<option value="${p}">${p}</option>`).join('')}
         </select>
         <button class="btn btn-primary" onclick="openCreateTask(${projectId})">${icon('plus')} Add Task</button>
-        <button class="btn btn-secondary btn-sm" onclick="api.exportCSV('tasks',${projectId})" data-tooltip="Export CSV">${icon('download',14)}</button>
+        <button class="btn btn-secondary btn-sm" onclick="api.exportCSV('tasks',${projectId})" data-tooltip="Export tasks as CSV">${icon('download',14)} CSV</button>
       </div>
     </div>
     <div class="card" id="list-table-container">${renderTable()}</div>`;

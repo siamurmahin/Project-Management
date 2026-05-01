@@ -1216,7 +1216,7 @@ function renderMarkdown(text) {
   s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
   s = s.replace(/@([A-Za-z][a-zA-Z]*(?:\s[A-Za-z][a-zA-Z]*)?)(?=[^a-zA-Z]|$)/g, '<span class="md-mention">@$1</span>');
   s = s.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
-  s = s.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+  s = s.replace(/(<li>.*?<\/li>)(\s*<li>.*?<\/li>)*/g, m => `<ul>${m}</ul>`);
   s = s.replace(/\n/g, '<br>');
   s = s.replace(/\x00(\d+)\x00/g, (_, i) => blocks[+i]);
   return s;
@@ -1250,7 +1250,16 @@ function renderCommentItem(c, task) {
         <div class="comment-text" id="comment-text-${c.id}">${renderMarkdown(c.content)}</div>
         <div id="comment-edit-${c.id}" style="display:none;">
           <div class="comment-edit-area">
-            <textarea id="comment-edit-input-${c.id}">${escHtml(c.content)}</textarea>
+            <div class="comment-toolbar" style="border-bottom:1px solid var(--border);margin-bottom:4px;">
+              <button class="toolbar-btn" onmousedown="event.preventDefault();applyFormat('bold','comment-edit-input-${c.id}')" title="Bold"><b>B</b></button>
+              <button class="toolbar-btn" onmousedown="event.preventDefault();applyFormat('italic','comment-edit-input-${c.id}')" title="Italic"><i>I</i></button>
+              <span class="comment-toolbar-sep"></span>
+              <button class="toolbar-btn" onmousedown="event.preventDefault();applyFormat('code','comment-edit-input-${c.id}')" title="Inline code" style="font-family:monospace;">\`</button>
+              <button class="toolbar-btn" onmousedown="event.preventDefault();applyFormat('codeblock','comment-edit-input-${c.id}')" title="Code block" style="font-size:.7rem;">{ }</button>
+              <span class="comment-toolbar-sep"></span>
+              <button class="toolbar-btn" onmousedown="event.preventDefault();applyFormat('list','comment-edit-input-${c.id}')" title="Bullet list">≡</button>
+            </div>
+            <textarea id="comment-edit-input-${c.id}" class="comment-textarea">${escHtml(c.content)}</textarea>
             <div class="comment-edit-actions">
               <button class="btn btn-sm" onclick="cancelEditComment(${c.id})">Cancel</button>
               <button class="btn btn-primary btn-sm" onclick="saveEditComment(${taskId},${c.id})">Save</button>
@@ -1396,8 +1405,8 @@ function insertMention(name) {
 // ──────────────────────────────────────────────
 // FORMAT TOOLBAR
 // ──────────────────────────────────────────────
-function applyFormat(type) {
-  const ta = document.getElementById('comment-input');
+function applyFormat(type, targetId) {
+  const ta = document.getElementById(targetId || 'comment-input');
   if (!ta) return;
   const s = ta.selectionStart, e = ta.selectionEnd;
   const sel = ta.value.slice(s, e);
