@@ -13,7 +13,8 @@ if (!process.env.JWT_SECRET) {
   console.warn('⚠️  JWT_SECRET not set in .env — generated a random secret. Sessions will be lost on restart. Set JWT_SECRET for production.');
 }
 
-const { initDb } = require('./config/database');
+const { initDb, getDb } = require('./config/database');
+const { authenticate } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
@@ -30,6 +31,12 @@ const templateRoutes = require('./routes/templates');
 const statusRoutes = require('./routes/statuses');
 const reportRoutes = require('./routes/reports');
 const userRoutes = require('./routes/users');
+const adminProjectsRoutes = require('./routes/adminProjects');
+const adminTasksRoutes = require('./routes/adminTasks');
+const adminSystemRoutes = require('./routes/adminSystem');
+const adminContentRoutes = require('./routes/adminContent');
+const adminImportRoutes = require('./routes/adminImport');
+const chatRoutes = require('./routes/chat');
 const setupSocket = require('./socket/handlers');
 
 const app = express();
@@ -75,6 +82,25 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/statuses', statusRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin/projects', adminProjectsRoutes);
+app.use('/api/admin/tasks', adminTasksRoutes);
+app.use('/api/admin/system', adminSystemRoutes);
+app.use('/api/admin/content', adminContentRoutes);
+app.use('/api/admin/import', adminImportRoutes);
+app.use('/api/chat', chatRoutes);
+
+// Active announcements (public authenticated)
+app.get('/api/announcements/active', authenticate, (req, res) => {
+  try {
+    const db = getDb();
+    const announcements = db.prepare(`
+      SELECT * FROM announcements
+      WHERE is_active=1 AND (expires_at IS NULL OR expires_at > datetime('now'))
+      ORDER BY created_at DESC
+    `).all();
+    res.json({ announcements });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // 404 for unmatched /api/* routes — must return JSON, not the SPA HTML
 app.use('/api', (req, res) => {

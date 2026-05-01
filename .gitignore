@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+
+# Database (kept on server, not in git)
+database.sqlite
+*.sqlite
+*.db
+
+# User uploads (stored on server)
+public/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Claude memory (local only)
+.claude/

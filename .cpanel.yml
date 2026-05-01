@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/$USER/nodevenv/projectmanagement/20/bin
+    - source $DEPLOYPATH/activate
+    - cd ~/projectmanagement
+    - npm install --production --silent
+    - mkdir -p tmp
+    - touch tmp/restart.txt
